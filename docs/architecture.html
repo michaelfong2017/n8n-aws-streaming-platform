@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>n8n AWS Streaming Platform - Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #ff9900;
+            --background: #ffffff;
+            --text: #333333;
+            --border: #e0e0e0;
+            --code-bg: #f5f5f5;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--background);
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            color: var(--secondary-color);
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .mermaid {
+            background: var(--code-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        th {
+            background: var(--primary-color);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid var(--secondary-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        .nav {
+            position: sticky;
+            top: 20px;
+            background: white;
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .nav a {
+            color: var(--primary-color);
+            text-decoration: none;
+            display: block;
+            padding: 5px 0;
+        }
+        
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        
+        footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 2px solid var(--border);
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎬 n8n AWS Streaming Platform</h1>
+        <p style="font-size: 1.2em; color: #666;">Architecture Documentation</p>
+    </header>
+
+    <div class="nav">
+        <strong>Quick Navigation:</strong>
+        <a href="#overview">Overview</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#components">Components</a>
+        <a href="#deployment">Deployment</a>
+        <a href="#cost">Cost Breakdown</a>
+    </div>
+
+    <section id="overview">
+        <h2>Overview</h2>
+        <p>Complete infrastructure for streaming from OBS to AWS IVS, with automated frame sampling via Lambda and analysis through n8n running on EKS.</p>
+        
+        <div class="success-box">
+            <strong>✅ Optimized for Hong Kong</strong>
+            <ul>
+                <li>Singapore region (ap-southeast-1) - 36ms latency</li>
+                <li>ARM64 (Graviton2) everywhere - 20% cost savings</li>
+                <li>Auto-scaling n8n (1-3 pods)</li>
+                <li>Cost: ~$155-160/month</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="architecture">
+        <h2>High-Level Architecture</h2>
+        
+        <div class="mermaid">
+graph TB
+    subgraph Client["🇭🇰 Hong Kong Client - 36ms latency"]
+        OBS[OBS Studio<br/>RTMPS Streaming]
+    end
+    
+    subgraph AWS["☁️ AWS ap-southeast-1 Singapore Region"]
+        subgraph IVS_Service["AWS IVS Service"]
+            IVS[IVS Channel BASIC<br/>• Low latency mode<br/>• RTMPS ingest<br/>• HLS playback]
+        end
+        
+        subgraph EventBridge_Service["EventBridge"]
+            EB[EventBridge Rule<br/>Rate: 5 seconds<br/>Configurable]
+        end
+        
+        subgraph Lambda_Service["Lambda Service"]
+            LambdaFunc[Frame Sampler Function<br/>• Python 3.11 ARM64<br/>• 512MB RAM<br/>• 30s timeout<br/>• VPC enabled]
+        end
+        
+        subgraph VPC["VPC 10.0.0.0/16"]
+            subgraph PublicSubnet["Public Subnets 2 AZs"]
+                IGW[Internet Gateway]
+                NAT[NAT Gateway<br/>Single AZ]
+                NLB[Network Load Balancer<br/>Internet-facing]
+            end
+            
+            subgraph PrivateSubnet["Private Subnets 2 AZs"]
+                subgraph EKS["EKS Cluster v1.28"]
+                    subgraph K8S_Workloads["Kubernetes Workloads"]
+                        ALBC[AWS LB Controller<br/>Helm Chart]
+                        N8N_Deploy[n8n Deployment<br/>Helm Chart]
+                        N8N1[n8n Pod 1<br/>200m-1000m CPU<br/>512Mi-1Gi RAM]
+                        N8N2[n8n Pod 2<br/>Optional]
+                        N8N3[n8n Pod 3<br/>Optional]
+                        HPA[HPA<br/>CPU > 70%<br/>1-3 replicas]
+                        MetricsServer[metrics-server]
+                    end
+                    NodeGroup[Managed Node Group<br/>t3.medium x1-2<br/>20GB GP3]
+                end
+                
+                RDS[(RDS PostgreSQL 15.4<br/>t4g.micro ARM64<br/>20GB GP3 encrypted<br/>Multi-AZ capable)]
+                
+                VPCEndpoints[VPC Endpoints<br/>• S3 Gateway<br/>• ECR API<br/>• ECR Docker]
+            end
+        end
+        
+        SecretsManager[AWS Secrets Manager<br/>RDS Password]
+        CloudWatch[CloudWatch Logs<br/>Lambda + EKS]
+    end
+    
+    OBS -->|RTMPS Encrypted| IVS
+    IVS -->|Stream State Events| EB
+    EB -->|Invoke every 5s| LambdaFunc
+    LambdaFunc -->|GetStream API| IVS
+    LambdaFunc -->|POST /webhook/frame-analysis| NAT
+    NAT --> NLB
+    NLB --> N8N1
+    NLB --> N8N2
+    NLB --> N8N3
+    HPA -.->|Monitors & Scales| N8N1
+    HPA -.->|Monitors & Scales| N8N2
+    HPA -.->|Monitors & Scales| N8N3
+    MetricsServer -.->|Provides Metrics| HPA
+    N8N1 <-->|PostgreSQL Protocol| RDS
+    N8N2 <-->|PostgreSQL Protocol| RDS
+    N8N3 <-->|PostgreSQL Protocol| RDS
+    NodeGroup -->|Pulls Images| VPCEndpoints
+    RDS -.->|Password| SecretsManager
+    LambdaFunc -.->|Logs| CloudWatch
+    EKS -.->|Control Plane Logs| CloudWatch
+    
+    style OBS fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
+    style IVS fill:#ff9900,stroke:#cc7700,stroke-width:2px
+    style LambdaFunc fill:#ff9900,stroke:#cc7700,stroke-width:2px
+    style N8N1 fill:#ea4b71,stroke:#c93a5d,stroke-width:2px
+    style N8N2 fill:#ea4b71,stroke:#c93a5d,stroke-width:2px
+    style N8N3 fill:#ea4b71,stroke:#c93a5d,stroke-width:2px
+    style RDS fill:#527fff,stroke:#3d5fcc,stroke-width:2px
+    style NLB fill:#ff9900,stroke:#cc7700,stroke-width:2px
+    style HPA fill:#326ce5,stroke:#2559cc,stroke-width:2px
+    style EKS fill:#326ce5,stroke:#2559cc,stroke-width:2px
+    style NAT fill:#ff9900,stroke:#cc7700,stroke-width:2px
+        </div>
+
+        <h3>Deployment Methods</h3>
+        
+        <div class="mermaid">
+graph LR
+    subgraph "Infrastructure Layer"
+        TF[Terraform<br/>All AWS Resources]
+    end
+    
+    subgraph "Kubernetes Layer - Helm Charts"
+        H1[AWS LB Controller<br/>✅ Helm]
+        H2[n8n Application<br/>✅ Helm]
+    end
+    
+    TF -->|Creates| EKS[EKS Cluster]
+    TF -->|Creates| RDS[RDS Database]
+    TF -->|Creates| IVS[IVS Channel]
+    TF -->|Creates| Lambda[Lambda Function]
+    EKS -->|Deployed via| H1
+    EKS -->|Deployed via| H2
+    
+    style TF fill:#7b42bc,color:#fff
+    style H1 fill:#0f1689,stroke:#0a0f5c,color:#fff
+    style H2 fill:#0f1689,stroke:#0a0f5c,color:#fff
+        </div>
+    </section>
+
+    <section id="components">
+        <h2>Component Details</h2>
+        
+        <h3>AWS Resources (ap-southeast-1)</h3>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>Type</th>
+                    <th>Purpose</th>
+                    <th>Cost/Month</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>IVS Channel</strong></td>
+                    <td>BASIC</td>
+                    <td>Stream ingestion from OBS</td>
+                    <td>$1.50/hour when streaming</td>
+                </tr>
+                <tr>
+                    <td><strong>Lambda</strong></td>
+                    <td>Graviton2 (ARM64)</td>
+                    <td>Frame sampling every 5s</td>
+                    <td>~$2-5</td>
+                </tr>
+                <tr>
+                    <td><strong>EKS Control Plane</strong></td>
+                    <td>Managed</td>
+                    <td>Kubernetes master</td>
+                    <td>$73</td>
+                </tr>
+                <tr>
+                    <td><strong>EC2 Nodes</strong></td>
+                    <td>t3.medium x1</td>
+                    <td>EKS worker nodes</td>
+                    <td>$33</td>
+                </tr>
+                <tr>
+                    <td><strong>RDS</strong></td>
+                    <td>t4g.micro PostgreSQL</td>
+                    <td>n8n database</td>
+                    <td>$12</td>
+                </tr>
+                <tr>
+                    <td><strong>NAT Gateway</strong></td>
+                    <td>Single AZ</td>
+                    <td>Outbound internet</td>
+                    <td>$35</td>
+                </tr>
+                <tr>
+                    <td><strong>VPC</strong></td>
+                    <td>10.0.0.0/16</td>
+                    <td>Network isolation</td>
+                    <td>Free</td>
+                </tr>
+                <tr>
+                    <td><strong>VPC Endpoints</strong></td>
+                    <td>S3, ECR</td>
+                    <td>Cost optimization</td>
+                    <td>$14</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="deployment">
+        <h2>Deployment Flow</h2>
+        
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Dev as Developer
+    participant TF as Terraform
+    participant AWS as AWS
+    participant Helm as Helm
+    participant K8s as Kubernetes
+    
+    Dev->>TF: terraform apply
+    TF->>AWS: Create VPC, Subnets, NAT
+    TF->>AWS: Create EKS Cluster
+    TF->>AWS: Create RDS Database
+    TF->>AWS: Create IVS Channel
+    TF->>AWS: Create Lambda Function
+    AWS-->>TF: Resources Created
+    TF-->>Dev: Outputs (endpoints, ARNs)
+    
+    Dev->>Helm: helm dependency update
+    Helm->>Helm: Download AWS LB Controller chart
+    Helm->>Helm: Download n8n chart
+    
+    Dev->>Helm: helm install n8n-streaming-platform
+    Helm->>K8s: Deploy AWS LB Controller
+    Helm->>K8s: Deploy n8n Deployment
+    Helm->>K8s: Create HPA
+    Helm->>K8s: Create Service (NLB)
+    K8s-->>Helm: Resources Created
+    Helm-->>Dev: Release Installed
+    
+    Dev->>K8s: kubectl get svc
+    K8s-->>Dev: n8n URL
+        </div>
+        
+        <div class="info-box">
+            <strong>Deployment Time:</strong>
+            <ul>
+                <li>Terraform: 15-20 minutes</li>
+                <li>Helm: 3-5 minutes</li>
+                <li>Total: ~25 minutes</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="cost">
+        <h2>Monthly Cost Breakdown</h2>
+        
+        <div class="mermaid">
+pie title "Monthly Cost Distribution (~$155-160)"
+    "EKS Control Plane" : 73
+    "EC2 Node (t3.medium)" : 33
+    "NAT Gateway" : 35
+    "RDS (t4g.micro)" : 12
+    "VPC Endpoints" : 14
+    "CloudWatch + Lambda" : 7
+        </div>
+        
+        <div class="warning-box">
+            <strong>💰 Cost Optimization Tips:</strong>
+            <ul>
+                <li>IVS: Only pay when streaming ($1.50/hour)</li>
+                <li>Use Spot instances for EKS nodes (70% savings)</li>
+                <li>ARM64 (Graviton2) everywhere (20% savings)</li>
+                <li>Single NAT Gateway for dev (Multi-AZ for prod)</li>
+            </ul>
+        </div>
+    </section>
+
+    <section>
+        <h2>Quick Start</h2>
+        
+        <h3>1. Deploy Infrastructure</h3>
+        <pre><code>cd terraform
+terraform init
+terraform apply</code></pre>
+        
+        <h3>2. Deploy Applications with Helm</h3>
+        <pre><code>cd ../helm/n8n-streaming-platform
+
+# Update dependencies
+helm dependency update
+
+# Get values from Terraform
+CLUSTER_NAME=$(cd ../../terraform && terraform output -raw eks_cluster_name)
+ALB_ROLE_ARN=$(cd ../../terraform && terraform output -raw eks_alb_controller_role_arn)
+
+# Install
+helm install n8n-streaming-platform . \
+  -n n8n-streaming \
+  --create-namespace \
+  --set global.clusterName=$CLUSTER_NAME \
+  --set aws-load-balancer-controller.serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ALB_ROLE_ARN</code></pre>
+        
+        <h3>3. Configure OBS</h3>
+        <pre><code># Get streaming credentials
+cd terraform
+terraform output ivs_ingest_endpoint
+terraform output -raw ivs_stream_key</code></pre>
+    </section>
+
+    <footer>
+        <p>n8n AWS Streaming Platform - Built with ❤️ for streaming and automation</p>
+        <p style="font-size: 0.9em; margin-top: 10px;">
+            <a href="../README.md" style="color: var(--primary-color);">Main README</a> | 
+            <a href="ARCHITECTURE.md" style="color: var(--primary-color);">Markdown Version</a>
+        </p>
+    </footer>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#e1f5ff',
+                primaryTextColor: '#333',
+                primaryBorderColor: '#0066cc',
+                lineColor: '#666',
+                secondaryColor: '#fff3e0',
+                tertiaryColor: '#f5f5f5'
+            }
+        });
+    </script>
+</body>
+</html>
+

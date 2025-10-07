@@ -1,0 +1,225 @@
+# Default values for n8n-streaming-platform
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global configuration
+global:
+  # AWS region
+  region: ap-southeast-1
+  
+  # EKS cluster name (will be set during installation)
+  clusterName: ""
+
+# AWS Load Balancer Controller configuration
+aws-load-balancer-controller:
+  enabled: true
+  
+  # Cluster name (override with --set during install)
+  clusterName: ""
+  
+  # Service account
+  serviceAccount:
+    create: true
+    name: aws-load-balancer-controller
+    annotations:
+      # IAM role ARN (override with --set during install)
+      eks.amazonaws.com/role-arn: ""
+  
+  # Controller replicas
+  replicaCount: 2
+  
+  # AWS region
+  region: ap-southeast-1
+  
+  # Image
+  image:
+    repository: public.ecr.aws/eks/aws-load-balancer-controller
+    tag: v2.6.2
+  
+  # Resources
+  resources:
+    limits:
+      cpu: 200m
+      memory: 500Mi
+    requests:
+      cpu: 100m
+      memory: 200Mi
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    fsGroup: 65534
+  
+  # Pod anti-affinity for HA
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+              - aws-load-balancer-controller
+          topologyKey: kubernetes.io/hostname
+  
+  # Priority class
+  priorityClassName: system-cluster-critical
+
+# n8n configuration
+n8n:
+  enabled: true
+  
+  # Replica count (will be managed by HPA)
+  replicaCount: 1
+  
+  # Image configuration
+  image:
+    repository: n8nio/n8n
+    tag: latest
+    pullPolicy: Always
+  
+  # n8n specific configuration
+  config:
+    # Database configuration
+    database:
+      type: postgresdb
+      postgresdb:
+        # These will be overridden during installation
+        # Get from: terraform output -raw rds_endpoint
+        host: "REPLACE_WITH_RDS_HOST"
+        port: 5432
+        database: "n8n"
+        user: "n8nadmin"
+        password: "REPLACE_WITH_RDS_PASSWORD"
+    
+    # Generic configuration
+    generic:
+      timezone: "Asia/Singapore"
+    
+    # Encryption key (generate with: openssl rand -base64 32)
+    encryptionKey: "REPLACE_WITH_ENCRYPTION_KEY"
+  
+  # Service configuration
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 5678
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+  
+  # Ingress (disabled, using LoadBalancer)
+  ingress:
+    enabled: false
+  
+  # Resources
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  # Horizontal Pod Autoscaler
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+        selectPolicy: Max
+  
+  # Persistence (disabled for dev)
+  persistence:
+    enabled: false
+    # For production:
+    # enabled: true
+    # storageClass: "gp3"
+    # size: 10Gi
+  
+  # Health checks
+  livenessProbe:
+    enabled: true
+    httpGet:
+      path: /healthz
+      port: 5678
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    enabled: true
+    httpGet:
+      path: /healthz
+      port: 5678
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  
+  # Pod annotations
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "5678"
+    prometheus.io/path: "/metrics"
+  
+  # Environment variables
+  extraEnv:
+    - name: N8N_METRICS
+      value: "true"
+    - name: N8N_LOG_LEVEL
+      value: "info"
+    - name: WEBHOOK_URL
+      value: "http://n8n.n8n.svc.cluster.local:5678/"
+    - name: N8N_PROTOCOL
+      value: "http"
+    - name: NODE_ENV
+      value: "production"
+  
+  # Pod anti-affinity
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+              - n8n
+          topologyKey: kubernetes.io/hostname
+  
+  # Service account
+  serviceAccount:
+    create: true
+    annotations: {}
+

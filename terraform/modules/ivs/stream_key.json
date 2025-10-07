@@ -1,0 +1,8 @@
+{
+    "streamKey": {
+        "arn": "arn:aws:ivs:ap-northeast-2:427058227235:stream-key/UJBQQi2xiZsX",
+        "channelArn": "arn:aws:ivs:ap-northeast-2:427058227235:channel/ADI0gKEVCDEL",
+        "tags": {},
+        "value": "sk_ap-northeast-2_UJBQQi2xiZsX_Y0KCWpPkUjT5O0f6lhN7i6yOVAk9a7"
+    }
+}

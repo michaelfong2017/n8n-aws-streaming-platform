@@ -1,0 +1,29 @@
+apiVersion: v2
+name: n8n-streaming-platform
+description: A Helm chart for n8n AWS Streaming Platform with IVS integration
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - n8n
+  - streaming
+  - aws-ivs
+  - automation
+home: https://github.com/yourusername/n8n-aws-streaming-platform
+sources:
+  - https://github.com/yourusername/n8n-aws-streaming-platform
+maintainers:
+  - name: Platform Team
+    email: team@example.com
+
+dependencies:
+  - name: aws-load-balancer-controller
+    version: "1.6.2"
+    repository: https://aws.github.io/eks-charts
+    condition: aws-load-balancer-controller.enabled
+  
+  - name: n8n
+    version: "0.1.0"
+    repository: https://8gears.container-registry.com/chartrepo/library
+    condition: n8n.enabled
+

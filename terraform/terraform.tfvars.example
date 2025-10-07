@@ -1,0 +1,53 @@
+# Example Terraform variables file
+# Copy this to terraform.tfvars and customize as needed
+
+# AWS Region - Singapore for minimal latency from Hong Kong
+aws_region = "ap-southeast-1"
+
+# Environment
+environment = "dev"
+
+# Project name (will be used in resource naming)
+project_name = "n8n-streaming"
+
+# VPC Configuration
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["ap-southeast-1a", "ap-southeast-1b"]
+
+# IVS Configuration
+ivs_channel_type      = "BASIC"  # BASIC is cheaper, STANDARD for better quality
+ivs_recording_enabled = false    # Set to true to enable S3 recording
+
+# Lambda Configuration
+lambda_frame_sample_rate = 5     # Sample every 5 seconds
+lambda_memory_size      = 512   # MB
+lambda_timeout          = 30    # seconds
+
+# EKS Configuration
+eks_cluster_version     = "1.28"
+eks_node_instance_type  = "t3.medium"
+eks_node_desired_size   = 1
+eks_node_min_size       = 1
+eks_node_max_size       = 2
+
+# RDS Configuration
+rds_instance_class      = "db.t4g.micro"
+rds_allocated_storage   = 20    # GB
+rds_database_name       = "n8n"
+rds_username           = "n8nadmin"
+
+# n8n Configuration
+n8n_min_replicas        = 1
+n8n_max_replicas        = 3
+n8n_cpu_target          = 70    # CPU % threshold for scaling
+n8n_webhook_path        = "/webhook/frame-analysis"
+
+# Production Overrides (uncomment for production):
+# environment             = "prod"
+# ivs_channel_type        = "STANDARD"
+# ivs_recording_enabled   = true
+# eks_node_instance_type  = "c6i.large"
+# eks_node_desired_size   = 2
+# eks_node_max_size       = 4
+# rds_instance_class      = "db.t4g.small"
+
